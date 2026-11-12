@@ -7,10 +7,10 @@ Credit risk default prediction on the **Give Me Some Credit** dataset (150,000 t
 ## Phase 1: EDA & Data Quality Audit
 
 ### Key Discoveries
-* **Informative Missingness (`MonthlyIncome`):** 29,731 records (~20%) have missing income. Their default rate is **5.61%**, lower than borrowers who reported income (6.95%). Missingness carries signal and is preserved as an explicit `Missing` bin rather than imputed.
-* **Mainframe Sentinel Code (`98`):** 264 records have `98` across all three delinquency columns with a **54.17% default rate**. This is a credit bureau system status code (e.g., frozen account), not a literal count of 98 missed payments.
-* **Extreme Outliers (`RevolvingUtilization`):** Values reach up to 50,000. Risk drops above 150% due to \$0/\$1 limit accounts with minor trailing balances. Coarse binning is required to enforce monotonicity.
-* **Data Errors (`age`):** Exactly 1 record has `age == 0` (entry error to drop).
+* **Informative Missingness (`MonthlyIncome`):** 29,731 records (~20%) have missing income with a **5.61% default rate** (lower than the 6.95% rate for reported income). Retained as an explicit `Missing` bin to preserve signal.
+* **Mainframe Sentinel Code (`98`):** 264 records exhibit `98` across all three delinquency columns with a **54.17% default rate**. Identified as a credit bureau status code (e.g., frozen account), not literal missed payments.
+* **Extreme Outliers (`RevolvingUtilization`):** Values reach up to 50,000 with a non-monotonic risk reversal above 150% due to \$0/\$1 limit accounts. Coarse binning into `>100%` enforeces monotonicity.
+* **Data Errors (`age`):** Filtered out 1 invalid record with `age == 0`.
 
 ### Information Value (IV) Leaderboard
 * `RevolvingUtilizationOfUnsecuredLines`: **1.136** (Dominant)
@@ -18,25 +18,39 @@ Credit risk default prediction on the **Give Me Some Credit** dataset (150,000 t
 * `NumberOfTime30-59DaysPastDueNotWorse`: **0.725** (Strong)
 * `NumberOfTime60-89DaysPastDueNotWorse`: **0.599** (Strong)
 * `age`: **0.231** (Medium)
-* Supporting features (`NumberOfOpenCreditLinesAndLoans`, `MonthlyIncome`, `DebtRatio`, `NumberRealEstateLoansOrLines`, `NumberOfDependents`): all $0.035 - 0.081$ (Weak, but retained).
+* Supporting features (`NumberOfOpenCreditLinesAndLoans`, `MonthlyIncome`, `DebtRatio`, `NumberRealEstateLoansOrLines`, `NumberOfDependents`): $0.035 - 0.081$ (Weak, but retained).
 
 ---
 
-## Phase 2: Logistic Scorecard & Scaling
+## Phase 2: Logistic Scorecard (Champion Model)
 
 ### Methodology
-1. **Stratified Split:** 80/20 train/test split preserving the 6.68% default rate to prevent target leakage.
+1. **Stratified Split:** 80/20 train/test split preserving the 6.68% default rate to prevent data leakage.
 2. **Coarse Binning & WoE:** Binned all 10 features to guarantee minimum bin sample size ($>2\%$) and strict monotonicity. Transformed data into standardized log-odds space ($\text{WoE} = \ln(\% \text{Goods} / \% \text{Bads})$).
-3. **Constrained Model:** Fitted Logistic Regression predicting $P(\text{Good})$. All 10 model coefficients are strictly positive ($\beta > 0$), obeying economic risk intuition.
+3. **Constrained Model:** Fitted Logistic Regression predicting $P(\text{Good})$. All 10 model coefficients are strictly positive ($\beta > 0$).
 4. **FICO Scaling Engine:** Calibrated to **Target Score 600 at 50:1 Odds**, with **PDO = 20 points** (Factor = 28.854, Offset = 487.123, Base Points = 562).
 
-### Performance & Validation
+---
 
-| Metric | Holdout Test (20%) | Kaggle Leaderboard |
-| :--- | :---: | :---: |
-| **AUC-ROC** | **0.8590** | **0.8585 (Private)** / **0.8524 (Public)** |
-| **Gini ($2 \times \text{AUC} - 1$)** | **0.7180** | — |
-| **KS Statistic** | **56.45%** ($p = 0.0$) | — |
-| **Score Range** | **405 – 629** (Median: 592) | — |
+## Phase 3: XGBoost Challenger Model & SHAP Explanations
 
-> **Key Takeaway:** The linear scorecard achieved near-zero generalization gap (0.8590 local vs. 0.8585 Kaggle Private), placing it within ~0.01 AUC of complex black-box gradient-boosted ensembles while remaining 100% transparent and regulatory compliant.
+### Feature Engineering & Modeling
+* Engineered financial domain features: `TotalDelinquency`, `IncomePerPerson`, `IsBureauFrozen`, and `EstimatedDollarDebt`.
+* Trained an **XGBoost Classifier** (200 trees, depth 5, learning rate 0.05, subsample 0.8).
+* Applied **SHAP (TreeExplainer)** to resolve the black-box dilemma:
+  * **Global Interpretation (Beeswarm):** Confirmed model decisions align with economic risk (TotalDelinquency and Utilization drive risk up; Age drives risk down).
+  * **Local Interpretation (Waterfall):** Successfully extracted top 3 adverse action reason codes per denied applicant for Regulation B compliance.
+
+---
+
+## Champion vs. Challenger Tournament Results
+
+| Metric | Phase 2 Logistic Scorecard (Champion) | Phase 3 XGBoost (Challenger) | Lift ($\Delta$) |
+| :--- | :---: | :---: | :---: |
+| **Local Test AUC (20%)** | `0.8590` | **`0.8655`** | **$+0.0065$** |
+| **Local Gini** | `0.7180` | **`0.7310`** | **$+0.0130$** |
+| **Local KS Statistic** | `56.45%` | **`57.63%`** | **$+1.18\%$** |
+| **Kaggle Public Leaderboard** | `0.85239` | **`0.85893`** | **$+0.00654$** |
+| **Kaggle Private Leaderboard** | `0.85852` | **`0.86344`** | **$+0.00492$** |
+
+> **Conclusion:** The XGBoost challenger delivers a consistent **+0.5% to +0.65% AUC lift** on both local and Kaggle holdout sets. With SHAP providing exact local feature attributions, the challenger meets regulatory explainability standards while capturing non-linear interactions.
