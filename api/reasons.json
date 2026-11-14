@@ -1,0 +1,12 @@
+{
+    "RevolvingUtilizationOfUnsecuredLines": "Proportion of revolving balances to credit limits is too high",
+    "age": "Limited length of established credit history",
+    "NumberOfTime30-59DaysPastDueNotWorse": "Too many recent past-due payment delinquencies (30–59 days)",
+    "DebtRatio": "Monthly debt obligations are too high relative to gross income",
+    "MonthlyIncome": "Insufficient verifiable gross monthly income",
+    "NumberOfOpenCreditLinesAndLoans": "Insufficient number of active, established credit lines",
+    "NumberOfTimes90DaysLate": "Serious delinquency history (account 90 or more days past due)",
+    "NumberRealEstateLoansOrLines": "Lack of established first mortgage or real estate loan history",
+    "NumberOfTime60-89DaysPastDueNotWorse": "Repeated delinquent payments (60–89 days past due)",
+    "NumberOfDependents": "High household dependent obligations relative to income capacity"
+}

@@ -74,6 +74,8 @@ def build_scorecard(binning_config: Dict, woe_map: Dict, clf) -> Tuple[pd.DataFr
     scorecard_json = {
         "base_points": base_points,
         "cutoff_score": CUTOFF_SCORE,
+        "factor": factor,
+        "offset": offset,
         "features": features_json
     }
 

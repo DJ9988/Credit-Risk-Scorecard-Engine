@@ -1,6 +1,8 @@
 {
     "base_points": 562,
     "cutoff_score": 580,
+    "factor": 28.85390081777927,
+    "offset": 487.1228762045055,
     "features": {
         "RevolvingUtilizationOfUnsecuredLines": {
             "bins": [
