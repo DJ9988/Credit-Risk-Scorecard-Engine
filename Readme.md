@@ -65,7 +65,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Dataset Download
+### 2. Dataset Download (Optional)
 The training pipeline expects `cs-training.csv` in `data/raw/`:
 
 ```bash
@@ -76,7 +76,7 @@ unzip data/raw/GiveMeSomeCredit.zip -d data/raw
 ```
 *Expected path:* `data/raw/cs-training.csv`
 
-### 3. Retrain Scorecard Artifact
+### 3. Retrain Scorecard Artifact (Optional)
 Generates `scorecard/scorecard.json` from raw training data:
 ```bash
 python train/train.py
