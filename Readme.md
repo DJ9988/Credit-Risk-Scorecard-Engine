@@ -55,22 +55,34 @@ Both models were validated on an 80/20 holdout test set and Kaggle's unseen glob
 
 ## Quickstart & Local Setup
 
-### 1. Installation
+### 1. Environment & Dependencies
 ```bash
 git clone https://github.com/your-username/credit-risk-scorecard.git
 cd credit-risk-scorecard
 
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt  # or: pip install pandas numpy scikit-learn xgboost shap fastapi uvicorn pydantic
+pip install -r requirements.txt
 ```
 
-### 2. Retrain Scorecard Artifact (Optional)
+### 2. Dataset Download
+The training pipeline expects `cs-training.csv` in `data/raw/`:
+
+```bash
+# Download and extract Give Me Some Credit from Kaggle
+mkdir -p data/raw
+kaggle competitions download -c GiveMeSomeCredit -p data/raw
+unzip data/raw/GiveMeSomeCredit.zip -d data/raw
+```
+*Expected path:* `data/raw/cs-training.csv`
+
+### 3. Retrain Scorecard Artifact
+Generates `scorecard/scorecard.json` from raw training data:
 ```bash
 python train/train.py
 ```
 
-### 3. Launch Web Dashboard & API
+### 4. Launch Web Dashboard & API
 ```bash
 uvicorn api.app:app --reload
 ```
