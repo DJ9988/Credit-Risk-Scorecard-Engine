@@ -1,5 +1,6 @@
 import json
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 import math
 from pathlib import Path
 
@@ -27,6 +28,12 @@ factor = scorecard["factor"]
 offset = scorecard["offset"]
 features = scorecard["features"]
 
+
+@app.get("/", response_class=HTMLResponse)
+def serve_dashboard():
+    html_file = BASE_DIR / "api" / "static" / "index.html"
+    with open(html_file, "r") as f:
+        return f.read()
 
 @app.get("/health")
 def health_check():

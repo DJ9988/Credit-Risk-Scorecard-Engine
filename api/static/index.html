@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk Scorecard | Explainable Underwriting Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <header class="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg font-bold text-xl">🏛️</span>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Credit Risk Scorecard Engine</h1>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Holdout AUC: 0.859
+                </span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    KS Stat: 56.45%
+                </span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    Cutoff: 580 Pts
+                </span>
+            </div>
+        </header>
+
+        <!-- Quick Presets -->
+        <section class="bg-slate-800/60 rounded-xl p-4 border border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">⚡ Test Scenarios:</span>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                <button type="button" onclick="loadPreset('prime')" class="flex-1 sm:flex-none px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold transition">
+                    🟢 Prime Borrower (Approval)
+                </button>
+                <button type="button" onclick="loadPreset('near_prime')" class="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition">
+                    🟡 Near-Prime (Borderline)
+                </button>
+                <button type="button" onclick="loadPreset('subprime')" class="flex-1 sm:flex-none px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition">
+                    🔴 Subprime / Delinquent (Denial)
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Workspace -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Form Column -->
+            <div class="lg:col-span-7 bg-slate-800/80 rounded-2xl p-6 sm:p-8 border border-slate-700/70 shadow-xl space-y-6">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>📋</span> Applicant Financial Attributes
+                </h2>
+
+                <form id="scorecard-form" onsubmit="event.preventDefault(); calculateScore();" class="space-y-6">
+                    
+                    <!-- Group 1: Demographics & Solvency -->
+                    <div class="space-y-4">
+                        <h3 class="text-xs font-semibold uppercase text-indigo-400 tracking-wider">Demographics & Income</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Age (Years)</label>
+                                <input type="number" id="age" required min="18" max="120" value="45"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Monthly Gross Income ($)</label>
+                                <input type="number" id="MonthlyIncome" step="100" placeholder="Leave empty for Missing" value="7500"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Debt Ratio (Monthly Debt / Income)</label>
+                                <input type="number" id="DebtRatio" step="0.01" required min="0" value="0.28"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Number of Dependents</label>
+                                <input type="number" id="NumberOfDependents" min="0" value="1"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 2: Credit Facility Usage -->
+                    <div class="space-y-4 pt-2 border-t border-slate-700/60">
+                        <h3 class="text-xs font-semibold uppercase text-indigo-400 tracking-wider">Credit Facilities & Utilization</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Revolving Utilization (0.0 to 1.0+)</label>
+                                <input type="number" id="RevolvingUtilizationOfUnsecuredLines" step="0.01" min="0" required value="0.15"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <span class="text-[10px] text-slate-400">e.g. 0.15 = 15% of limit</span>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Open Loans & Lines</label>
+                                <input type="number" id="NumberOfOpenCreditLinesAndLoans" min="0" required value="6"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Real Estate Loans</label>
+                                <input type="number" id="NumberRealEstateLoansOrLines" min="0" required value="1"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 3: Delinquency History -->
+                    <div class="space-y-4 pt-2 border-t border-slate-700/60">
+                        <h3 class="text-xs font-semibold uppercase text-indigo-400 tracking-wider">Past Delinquency Roll-Rates</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">30–59 Days Late</label>
+                                <input type="number" id="NumberOfTime30-59DaysPastDueNotWorse" min="0" required value="0"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">60–89 Days Late</label>
+                                <input type="number" id="NumberOfTime60-89DaysPastDueNotWorse" min="0" required value="0"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">90+ Days Late</label>
+                                <input type="number" id="NumberOfTimes90DaysLate" min="0" required value="0"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition transform active:scale-[0.99] flex items-center justify-center gap-2">
+                        <span>⚡ Calculate Credit Score & Decision</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Result Column -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Decision Card -->
+                <div id="result-card" class="bg-slate-800/80 rounded-2xl p-6 sm:p-8 border border-slate-700/70 shadow-xl flex flex-col items-center justify-center text-center space-y-6 min-h-[380px]">
+                    <div id="empty-state" class="space-y-3">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-slate-700/50 flex items-center justify-center text-2xl">
+                            📊
+                        </div>
+                        <h3 class="text-base font-semibold text-slate-200">Awaiting Evaluation</h3>
+                        <p class="text-xs text-slate-400 max-w-xs">
+                            Adjust applicant inputs or click one of the presets above, then click Calculate Score.
+                        </p>
+                    </div>
+
+                    <!-- Live Content (Hidden initially) -->
+                    <div id="decision-content" class="hidden w-full space-y-6">
+                        
+                        <!-- Status Badge -->
+                        <div>
+                            <span id="decision-badge" class="px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider inline-block">
+                                --
+                            </span>
+                        </div>
+
+                        <!-- Score Display -->
+                        <div class="space-y-1">
+                            <div class="text-6xl font-black tracking-tight" id="score-display">--</div>
+                            <p class="text-xs text-slate-400 font-medium">FICO Calibrated Credit Score (300–850)</p>
+                        </div>
+
+                        <!-- Probability Metric -->
+                        <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700/50 w-full space-y-2 text-left">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">Calibrated Default Probability:</span>
+                                <span class="font-bold text-white text-sm" id="prob-display">--%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="prob-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Adverse Action Section -->
+                        <div id="adverse-section" class="w-full text-left space-y-2 hidden">
+                            <div class="flex items-center gap-1.5 text-xs font-bold text-rose-400">
+                                <span>⚠️</span>
+                                <span>Regulation B Adverse Action Reasons:</span>
+                            </div>
+                            <ul id="reasons-list" class="space-y-1.5 text-xs text-slate-300">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div class="bg-slate-800/40 rounded-xl p-5 border border-slate-700/40 text-xs text-slate-400 space-y-2">
+                    <p class="font-semibold text-slate-300">⚖️ How this Decision Engine Works:</p>
+                    <p>The score is generated through exact integer point lookup derived from <strong>Weight of Evidence (WoE)</strong> binning. If denied, the 3 features that deducted the largest points are automatically extracted as legally mandated <strong>Adverse Action Notices</strong>.</p>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const PRESETS = {
+            prime: {
+                age: 52,
+                MonthlyIncome: 9500,
+                DebtRatio: 0.18,
+                NumberOfDependents: 1,
+                RevolvingUtilizationOfUnsecuredLines: 0.08,
+                NumberOfOpenCreditLinesAndLoans: 8,
+                NumberRealEstateLoansOrLines: 2,
+                'NumberOfTime30-59DaysPastDueNotWorse': 0,
+                'NumberOfTime60-89DaysPastDueNotWorse': 0,
+                NumberOfTimes90DaysLate: 0
+            },
+            near_prime: {
+                age: 34,
+                MonthlyIncome: 4200,
+                DebtRatio: 0.42,
+                NumberOfDependents: 2,
+                RevolvingUtilizationOfUnsecuredLines: 0.65,
+                NumberOfOpenCreditLinesAndLoans: 5,
+                NumberRealEstateLoansOrLines: 0,
+                'NumberOfTime30-59DaysPastDueNotWorse': 1,
+                'NumberOfTime60-89DaysPastDueNotWorse': 0,
+                NumberOfTimes90DaysLate: 0
+            },
+            subprime: {
+                age: 26,
+                MonthlyIncome: 2400,
+                DebtRatio: 0.85,
+                NumberOfDependents: 1,
+                RevolvingUtilizationOfUnsecuredLines: 0.95,
+                NumberOfOpenCreditLinesAndLoans: 3,
+                NumberRealEstateLoansOrLines: 0,
+                'NumberOfTime30-59DaysPastDueNotWorse': 2,
+                'NumberOfTime60-89DaysPastDueNotWorse': 1,
+                NumberOfTimes90DaysLate: 1
+            }
+        };
+
+        function loadPreset(key) {
+            const data = PRESETS[key];
+            for (const [id, val] of Object.entries(data)) {
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            }
+            calculateScore();
+        }
+
+        async function calculateScore() {
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.classList.add('opacity-75');
+
+            const incomeVal = document.getElementById('MonthlyIncome').value;
+            const depVal = document.getElementById('NumberOfDependents').value;
+
+            const payload = {
+                age: parseInt(document.getElementById('age').value),
+                MonthlyIncome: incomeVal === "" ? null : parseFloat(incomeVal),
+                DebtRatio: parseFloat(document.getElementById('DebtRatio').value),
+                NumberOfDependents: depVal === "" ? null : parseInt(depVal),
+                RevolvingUtilizationOfUnsecuredLines: parseFloat(document.getElementById('RevolvingUtilizationOfUnsecuredLines').value),
+                NumberOfOpenCreditLinesAndLoans: parseInt(document.getElementById('NumberOfOpenCreditLinesAndLoans').value),
+                NumberRealEstateLoansOrLines: parseInt(document.getElementById('NumberRealEstateLoansOrLines').value),
+                'NumberOfTime30-59DaysPastDueNotWorse': parseInt(document.getElementById('NumberOfTime30-59DaysPastDueNotWorse').value),
+                'NumberOfTime60-89DaysPastDueNotWorse': parseInt(document.getElementById('NumberOfTime60-89DaysPastDueNotWorse').value),
+                NumberOfTimes90DaysLate: parseInt(document.getElementById('NumberOfTimes90DaysLate').value)
+            };
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                renderResult(data);
+            } catch (err) {
+                alert("Error connecting to scoring service: " + err);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-75');
+            }
+        }
+
+        function renderResult(data) {
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('decision-content').classList.remove('hidden');
+
+            const scoreDisplay = document.getElementById('score-display');
+            const badge = document.getElementById('decision-badge');
+            const probDisplay = document.getElementById('prob-display');
+            const probBar = document.getElementById('prob-bar');
+            const adverseSection = document.getElementById('adverse-section');
+            const reasonsList = document.getElementById('reasons-list');
+
+            scoreDisplay.textContent = data.credit_score;
+            const probPct = (data.default_probability * 100).toFixed(1);
+            probDisplay.textContent = probPct + "%";
+            probBar.style.width = Math.min(100, Math.max(5, probPct)) + "%";
+
+            if (data.decision === 'APPROVED') {
+                badge.textContent = "APPROVED";
+                badge.className = "px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider inline-block bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                scoreDisplay.className = "text-6xl font-black tracking-tight text-emerald-400";
+                probBar.className = "h-full bg-emerald-500 rounded-full transition-all duration-500";
+                adverseSection.classList.add('hidden');
+            } else {
+                badge.textContent = "DENIED";
+                badge.className = "px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider inline-block bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                scoreDisplay.className = "text-6xl font-black tracking-tight text-rose-400";
+                probBar.className = "h-full bg-rose-500 rounded-full transition-all duration-500";
+                
+                reasonsList.innerHTML = "";
+                if (data.adverse_actions_reasons && data.adverse_actions_reasons.length > 0) {
+                    data.adverse_actions_reasons.forEach(r => {
+                        const li = document.createElement('li');
+                        li.className = "flex items-start gap-1.5 bg-rose-950/30 border border-rose-900/50 rounded-lg p-2";
+                        li.innerHTML = `<span>•</span><span>${r}</span>`;
+                        reasonsList.appendChild(li);
+                    });
+                    adverseSection.classList.remove('hidden');
+                } else {
+                    adverseSection.classList.add('hidden');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
